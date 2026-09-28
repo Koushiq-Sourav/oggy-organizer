@@ -1,13 +1,33 @@
-"""Storage: file-based reports + optional Mongo, offline-first."""
+"""Memory of the app: plain JSON files, no database server.
+docs.json lists files, reports/ keeps verdicts, uploads/ keeps raws.
+IDs carry microseconds so two fast uploads never clash.
+Cloud note: read-only hosts (Vercel) fall back to /tmp automatically."""
 import json
 from pathlib import Path
 from datetime import datetime
 
-ROOT = Path(__file__).resolve().parents[2] / "data" / "reports"
+
+def _writable_data_dir() -> Path:
+    """Bundled data/ locally, /tmp on read-only cloud disks."""
+    bundled = Path(__file__).resolve().parents[2] / "data"
+    try:
+        bundled.mkdir(parents=True, exist_ok=True)
+        probe = bundled / ".write_test"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink()
+        return bundled
+    except Exception:
+        fallback = Path("/tmp/oggy-data")
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+DATA_DIR = _writable_data_dir()
+ROOT = DATA_DIR / "reports"
 ROOT.mkdir(parents=True, exist_ok=True)
-UPLOADS = Path(__file__).resolve().parents[2] / "data" / "uploads"
+UPLOADS = DATA_DIR / "uploads"
 UPLOADS.mkdir(parents=True, exist_ok=True)
-DOCS = Path(__file__).resolve().parents[2] / "data" / "docs.json"
+DOCS = DATA_DIR / "docs.json"
 
 KIND_BY_EXT = {
     ".pdf": "papers", ".html": "papers", ".htm": "papers", ".docx": "papers",
@@ -18,10 +38,12 @@ KIND_BY_EXT = {
 
 
 def kind_for(name: str) -> str:
+    """File extension to library shelf."""
     return KIND_BY_EXT.get(Path(name or "").suffix.lower(), "papers")
 
 
 def save_upload(filename: str, data: bytes) -> dict:
+    """Store file bytes, prepend its doc entry."""
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     safe = Path(filename or "file").name
     stored = f"{stamp}_{safe}"
@@ -35,6 +57,7 @@ def save_upload(filename: str, data: bytes) -> dict:
 
 
 def list_docs() -> list:
+    """Read the doc index (empty list if none)."""
     if not DOCS.exists():
         return []
     try:
@@ -44,6 +67,7 @@ def list_docs() -> list:
 
 
 def mark_doc(doc_id: str, status: str, report: str | None = None) -> None:
+    """Stamp status plus report onto one doc."""
     docs = list_docs()
     for d in docs:
         if d.get("id") == doc_id:
@@ -70,6 +94,7 @@ def delete_doc(doc_id: str) -> bool:
 
 
 def save_report(report: dict) -> str:
+    """Store report JSON under a microsecond id."""
     name = datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json"
     payload = {"id": name, **report}
     (ROOT / name).write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -77,6 +102,7 @@ def save_report(report: dict) -> str:
 
 
 def list_reports() -> list:
+    """Newest 20 report summaries."""
     out = []
     for p in sorted(ROOT.glob("*.json"), reverse=True)[:20]:
         try:
@@ -96,6 +122,7 @@ def list_reports() -> list:
 
 
 def load_report(rid: str) -> dict:
+    """One report, or a missing/error placeholder."""
     p = ROOT / Path(rid).name
     if not p.exists():
         return {"overall": 0, "verdict": "missing", "major": 0, "minor": 0, "parts": [], "fix_list": [f"Report {rid} not found"]}

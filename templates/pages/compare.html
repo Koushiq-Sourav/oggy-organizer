@@ -1,0 +1,140 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="card flex gap-4 items-center"><img src="/static/images/oggy-mascot.webp" class="w-16 h-16 rounded-xl object-cover" alt="Oggy compare"><div><h1 class="font-extrabold text-xl">Compare</h1></div></div>
+<div class="card" style="margin-top:16px">
+<div class="cmp-controls">
+<div class="cmp-side"><span class="cmp-tag cmp-tag-a">A</span><label class="meta" for="cmp-a">Base — older / mine</label><select id="cmp-a" class="btn-outline" style="width:100%;margin-top:4px"></select><div class="cmp-file"><button type="button" class="btn-outline cmp-file-btn" id="cmp-fa-btn">Choose file</button><span class="meta cmp-file-name" id="cmp-fa-name">No file chosen</span></div><input type="file" id="cmp-fa" class="file-pick" accept=".pdf,.pptx,.docx,.html,.htm,.csv,.xlsx,.txt,.md" tabindex="-1"></div>
+<div class="cmp-mid" aria-hidden="true"><span class="cmp-vs">vs</span><button class="btn-outline" id="cmp-swap" type="button" title="Swap A and B" aria-label="Swap A and B">⇄</button></div>
+<div class="cmp-side"><span class="cmp-tag cmp-tag-b">B</span><label class="meta" for="cmp-b">Target — journal / updated</label><select id="cmp-b" class="btn-outline" style="width:100%;margin-top:4px"></select><div class="cmp-file"><button type="button" class="btn-outline cmp-file-btn" id="cmp-fb-btn">Choose file</button><span class="meta cmp-file-name" id="cmp-fb-name">No file chosen</span></div><input type="file" id="cmp-fb" class="file-pick" accept=".pdf,.pptx,.docx,.html,.htm,.csv,.xlsx,.txt,.md" tabindex="-1"></div>
+</div>
+<div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn-primary" id="cmp-go" type="button">Compare</button><span class="meta">Library pick, or choose a new file on either side.</span></div>
+<div class="meta" id="cmp-err" role="alert" style="margin-top:8px"></div>
+</div>
+<div id="cmp-out" hidden>
+<div class="card" style="margin-top:16px"><div class="meta" id="cmp-verdict-line"></div><h1 class="page-title" id="cmp-headline"></h1><p class="meta" id="cmp-sub"></p></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:16px" id="cmp-cards"></div>
+<div class="card" style="margin-top:16px"><div style="font-weight:500">Score by check</div><div id="cmp-agents" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:15px"></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:16px">
+<div class="card"><div style="font-weight:500">Fixed in B</div><ul id="cmp-fixed" style="font-size:15px;list-style:disc;padding-left:20px;margin-top:4px;color:var(--text-secondary)"></ul></div>
+<div class="card"><div style="font-weight:500">Still open</div><ul id="cmp-remaining" style="font-size:15px;list-style:disc;padding-left:20px;margin-top:4px;color:var(--text-secondary)"></ul></div>
+<div class="card"><div style="font-weight:500">New in B</div><ul id="cmp-new" style="font-size:15px;list-style:disc;padding-left:20px;margin-top:4px;color:var(--text-secondary)"></ul></div>
+</div>
+</div>
+<style>@media (max-width: 900px) { .cmp-controls { grid-template-columns: minmax(0,1fr) !important; } }</style>
+<script>
+(function () {
+  "use strict";
+  var sa = document.getElementById("cmp-a"), sb = document.getElementById("cmp-b");
+  var go = document.getElementById("cmp-go"), swap = document.getElementById("cmp-swap");
+  var err = document.getElementById("cmp-err"), out = document.getElementById("cmp-out");
+  function wirePick(btnId, inputId, nameId) {
+    var btn = document.getElementById(btnId), input = document.getElementById(inputId), name = document.getElementById(nameId);
+    if (!btn || !input) return;
+    btn.onclick = function () { input.click(); };
+    input.addEventListener("change", function () {
+      if (name) name.textContent = (input.files && input.files.length) ? input.files[0].name : "No file chosen";
+    });
+  }
+  wirePick("cmp-fa-btn", "cmp-fa", "cmp-fa-name");
+  wirePick("cmp-fb-btn", "cmp-fb", "cmp-fb-name");
+  function esc(s) { return (s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function opt(d) {
+    var o = document.createElement("option");
+    o.value = d.id;
+    o.textContent = d.name + (d.report ? "" : " (no report yet)");
+    if (!d.report) o.disabled = true;
+    return o;
+  }
+  function loadDocs() {
+    return fetch("/api/docs").then(function (r) { return r.json(); }).then(function (j) {
+      var docs = (j.docs || []).filter(function (d) { return d.report; });
+      var keepA = sa.value, keepB = sb.value;
+      sa.innerHTML = ""; sb.innerHTML = "";
+      if (!docs.length) { err.textContent = "No analyzed files yet. Add files in the library first, or choose two new files below."; return []; }
+      docs.forEach(function (d) { sa.appendChild(opt(d)); sb.appendChild(opt(d)); });
+      if (keepA) sa.value = keepA;
+      if (keepB) sb.value = keepB;
+      if (!sa.value && docs.length) sa.selectedIndex = 0;
+      if (!sb.value && docs.length) sb.selectedIndex = Math.min(1, docs.length - 1);
+      var q = new URLSearchParams(location.search);
+      if (q.get("a")) sa.value = q.get("a");
+      if (q.get("b")) sb.value = q.get("b");
+      return docs;
+    }).catch(function () { err.textContent = "Could not load library."; return []; });
+  }
+  loadDocs();
+  swap.onclick = function () { var t = sa.value; sa.value = sb.value; sb.value = t; };
+  function uploadOne(f) {
+    var fd = new FormData();
+    if (/\.pptx$/i.test(f.name)) fd.append("deck", f); else fd.append("thesis", f);
+    return fetch("/api/analyze", { method: "POST", body: fd }).then(function (r) {
+      if (!r.ok) throw new Error("upload failed");
+      return r.json();
+    }).then(function (j) { return j.doc || j.deck; });
+  }
+  go.onclick = async function () {
+    err.textContent = "";
+    go.disabled = true;
+    go.textContent = "Working...";
+    try {
+      var fa = document.getElementById("cmp-fa").files[0];
+      var fb = document.getElementById("cmp-fb").files[0];
+      if (fa) { err.textContent = "Analyzing file A..."; await uploadOne(fa); await loadDocs(); }
+      if (fb) { err.textContent = "Analyzing file B..."; await uploadOne(fb); await loadDocs(); }
+      // Re-read uploaded ids from the refreshed library by filename.
+      if (fa) { var hitA = Array.from(sa.options).find(function (o) { return o.text.indexOf(fa.name) === 0; }); if (hitA) sa.value = hitA.value; }
+      if (fb) { var hitB = Array.from(sb.options).find(function (o) { return o.text.indexOf(fb.name) === 0; }); if (hitB) sb.value = hitB.value; }
+      err.textContent = "";
+      if (!sa.value || !sb.value) { err.textContent = "Pick two files (library or new uploads)."; return; }
+      if (sa.value === sb.value) { err.textContent = "Pick two different files."; return; }
+      var r = await fetch("/api/compare?a=" + encodeURIComponent(sa.value) + "&b=" + encodeURIComponent(sb.value));
+      if (!r.ok) throw new Error("compare failed");
+      render(await r.json());
+    } catch (e) {
+      err.textContent = "Compare failed. Both files need a finished report.";
+    } finally {
+      go.disabled = false;
+      go.textContent = "Compare";
+    }
+  };
+  function pill(v) { return v === "Pass" ? "pill-pass" : "pill-fix"; }
+  function render(j) {
+    out.hidden = false;
+    var d = j.delta, a = j.a, b = j.b;
+    var arrow = d.score_delta > 0 ? "+" + d.score_delta : "" + d.score_delta;
+    document.getElementById("cmp-verdict-line").textContent = a.verdict + " -> " + b.verdict;
+    document.getElementById("cmp-headline").textContent = a.overall + " -> " + b.overall + " (" + arrow + ")";
+    document.getElementById("cmp-sub").textContent = "Major " + d.major_delta + " / Minor " + d.minor_delta + " — " +
+      d.fixed.length + " fixed, " + d.remaining.length + " still open, " + d.new.length + " new.";
+    var cards = document.getElementById("cmp-cards");
+    cards.innerHTML = "";
+    [{ k: "A", v: a }, { k: "B", v: b }].forEach(function (x) {
+      var div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = "<div class='meta'>" + x.k + " — " + esc(x.v.name) + "</div>" +
+        "<div style='font-size:28px;font-weight:600'>" + x.v.overall + " <span class='pill " + pill(x.v.verdict) + "'>" + esc(x.v.verdict) + "</span></div>" +
+        "<div class='meta'>Major " + x.v.major + " / Minor " + x.v.minor + "</div>" +
+        "<a style='text-decoration:underline' href='/report/" + encodeURIComponent(x.v.report) + "'>Open full report</a>";
+      cards.appendChild(div);
+    });
+    var ag = document.getElementById("cmp-agents");
+    ag.innerHTML = "";
+    if (!d.agents.length) ag.textContent = "No per-check data.";
+    d.agents.forEach(function (r) {
+      var row = document.createElement("div");
+      var dd = (r.delta === null || r.delta === undefined) ? "—" : (r.delta > 0 ? "+" + r.delta : "" + r.delta);
+      row.innerHTML = "<span style='font-weight:500'>" + esc(r.agent) + "</span> " +
+        "<span class='meta'>" + (r.a === null || r.a === undefined ? "—" : r.a) + " -> " + (r.b === null || r.b === undefined ? "—" : r.b) + " (" + dd + ")</span>";
+      ag.appendChild(row);
+    });
+    [["cmp-fixed", d.fixed], ["cmp-remaining", d.remaining], ["cmp-new", d.new]].forEach(function (pair) {
+      var ul = document.getElementById(pair[0]);
+      ul.innerHTML = "";
+      if (!pair[1].length) { var li = document.createElement("li"); li.textContent = "None."; ul.appendChild(li); return; }
+      pair[1].slice(0, 30).forEach(function (t) { var li2 = document.createElement("li"); li2.textContent = t; ul.appendChild(li2); });
+    });
+    out.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+})();
+</script>
+{% endblock %}

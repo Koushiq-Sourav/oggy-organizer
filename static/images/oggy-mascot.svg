@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#0F2847"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="100" cy="172" rx="52" ry="10" fill="#0F2847" opacity="0.12"/>
+  <circle cx="100" cy="105" r="62" fill="url(#body)"/>
+  <circle cx="100" cy="105" r="62" fill="none" stroke="#0F2847" stroke-width="5"/>
+  <polygon points="52,62 40,22 78,48" fill="#38bdf8" stroke="#0F2847" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="148,62 160,22 122,48" fill="#38bdf8" stroke="#0F2847" stroke-width="5" stroke-linejoin="round"/>
+  <ellipse cx="100" cy="120" rx="38" ry="30" fill="#fff"/>
+  <circle cx="82" cy="92" r="11" fill="#fff"/>
+  <circle cx="118" cy="92" r="11" fill="#fff"/>
+  <circle cx="82" cy="92" r="5" fill="#0F2847"/>
+  <circle cx="118" cy="92" r="5" fill="#0F2847"/>
+  <ellipse cx="100" cy="112" rx="7" ry="5.5" fill="#ef4444"/>
+  <path d="M100 117 Q100 126 90 126 M100 117 Q100 126 110 126" stroke="#0F2847" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <g stroke="#0F2847" stroke-width="3" stroke-linecap="round">
+    <line x1="52" y1="112" x2="30" y2="106"/><line x1="52" y1="120" x2="30" y2="122"/>
+    <line x1="148" y1="112" x2="170" y2="106"/><line x1="148" y1="120" x2="170" y2="122"/>
+  </g>
+  <rect x="78" y="140" width="44" height="20" rx="6" fill="#009688"/>
+  <text x="100" y="154" font-family="Arial" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">OGGY</text>
+</svg>

@@ -1,0 +1,1 @@
+﻿"""Oggy Organizer package."""

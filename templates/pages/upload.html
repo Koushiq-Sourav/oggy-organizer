@@ -1,0 +1,33 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<h1 class="page-title" style="margin:0 0 4px">Thesis review</h1>
+<p class="meta" style="margin:0 0 8px">Paired thesis + deck Q1 check. For single files, use Add files in the library.</p>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px" class="upload-grid">
+<div class="card">
+<form id="oggy-form" action="/api/analyze" method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:16px">
+<div>
+<div style="font-size:16px;font-weight:500;margin-bottom:4px">Thesis file</div>
+<div class="dropzone" id="thesis-drop" role="button" tabindex="0" aria-label="Drop thesis file or press Enter to browse">Drop thesis .pdf / .html / .docx here, or <button type="button" class="btn-outline" style="padding:4px 8px" onclick="document.getElementById('thesis-input').click()">Choose file</button></div>
+<input id="thesis-input" class="file-pick" type="file" name="thesis" accept=".pdf,.html,.htm,.docx" required tabindex="-1">
+<div id="thesis-chip" hidden style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:16px;background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 16px"><span id="thesis-name" style="font-weight:500"></span><button type="button" id="thesis-clear" class="btn-outline" style="padding:4px 8px" aria-label="Remove thesis file">Remove</button></div>
+<div class="meta" id="thesis-err" role="alert"></div>
+</div>
+<div>
+<div style="font-size:16px;font-weight:500;margin-bottom:4px">Slide deck (optional)</div>
+<div class="dropzone" id="deck-drop" role="button" tabindex="0" aria-label="Drop slide deck or press Enter to browse">Drop deck .pptx here, or <button type="button" class="btn-outline" style="padding:4px 8px" onclick="document.getElementById('deck-input').click()">Choose file</button></div>
+<input id="deck-input" class="file-pick" type="file" name="deck" accept=".pptx" tabindex="-1">
+<div id="deck-chip" hidden style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:16px;background:var(--surface-2);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 16px"><span id="deck-name" style="font-weight:500"></span><button type="button" id="deck-clear" class="btn-outline" style="padding:4px 8px" aria-label="Remove deck file">Remove</button></div>
+<div class="meta" id="deck-err" role="alert"></div>
+</div>
+<div><button class="btn-primary" type="submit">Analyze like a Q1 reviewer</button></div>
+</form>
+<div id="oggy-progress" hidden style="margin-top:8px;font-size:16px;font-weight:500">Analyzing... <span id="oggy-bar">0%</span><div class="progress-track"><div class="progress-fill" id="oggy-fill"></div></div></div>
+<div id="oggy-result" style="margin-top:8px;font-size:16px"></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div class="card" style="font-size:16px"><div style="font-weight:500;margin-bottom:4px">What you get</div><ul style="list-style:disc;padding-left:20px;display:flex;flex-direction:column;gap:4px;color:var(--text-secondary)"><li>Score 0–100 with Pass / Fix verdict</li><li>8 checks: structure, Q1, wording, ethics, refs, academic, slides, consistency</li><li>Fix list in marks order</li><li>Report saved to the library</li></ul></div>
+<div class="card" style="font-size:16px"><div style="font-weight:500;margin-bottom:4px">Recent Q1 reports</div><div id="upload-history" class="meta">Loading…</div></div>
+</div>
+</div>
+<style>@media (max-width: 900px) { .upload-grid { grid-template-columns: minmax(0, 1fr) !important; } }</style>
+{% endblock %}
